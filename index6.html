@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interaktívna kniha - Profesionálne MP3 Audio</title>
+  <style>
+    body {
+      font-family: 'Georgia', serif;
+      background-color: #eef2f5;
+      padding: 20px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+
+    .book-viewport {
+      width: 100%;
+      max-width: 620px;
+      height: 580px;
+      perspective: 2000px;
+      position: relative;
+    }
+
+    .book-container {
+      width: 100%;
+      height: 100%;
+      background: #fdfbf7;
+      box-sizing: border-box;
+      border-radius: 4px 16px 16px 4px;
+      box-shadow: 
+        -10px 0 15px rgba(0,0,0,0.1),
+        inset 20px 0 30px rgba(0,0,0,0.03), 
+        0 10px 25px rgba(0,0,0,0.15);
+      border-left: 10px solid #5a6268;
+      position: relative;
+    }
+
+    h1 {
+      font-family: sans-serif;
+      font-size: 15px;
+      color: #7f8c8d;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 15px;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 8px;
+    }
+
+    .reader-paragraph {
+      font-size: 17px;
+      line-height: 1.7;
+      color: #2c3e50;
+      text-align: justify;
+      margin-bottom: 14px;
+    }
+
+    .word {
+      cursor: pointer;
+      border-bottom: 1px dotted #bdc3c7;
+      transition: background-color 0.1s ease;
+      border-radius: 3px;
+      padding: 0 2px;
+    }
+
+    .word:hover {
+      background-color: #e8f4f8;
+      border-bottom: 1px solid #3498db;
+    }
+
+    .phrase-highlight {
+      background-color: #fff3cd;
+      border-bottom: 2px solid #ffca28;
+      font-weight: 500;
+    }
+
+    /* ČERVENÉ ZVÝRAZNENIE SLOVA */
+    .word-reading {
+      background-color: #ff7675 !important;
+      color: #ffffff !important;
+      border-radius: 4px;
+      padding: 2px 4px;
+    }
+
+    .paper-sheet {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      transform-origin: left center;
+      transform-style: preserve-3d;
+      transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .paper-sheet.flipped {
+      transform: rotateY(-180deg);
+    }
+
+    .page-face {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      padding: 30px 25px;
+      box-sizing: border-box;
+      background: #fdfbf7;
+      border-radius: 0 16px 16px 0;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+    }
+
+    .page-front { z-index: 2; }
+    .page-back {
+      transform: rotateY(180deg);
+      z-index: 1;
+      border-radius: 16px 0 0 16px;
+      background: #faf6ee;
+    }
+
+    .controls {
+      position: absolute;
+      bottom: 15px;
+      left: 20px;
+      right: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 10px;
+      font-family: sans-serif;
+      z-index: 1000;
+    }
+
+    .nav-btn {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      padding: 10px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .nav-btn:disabled { background-color: #cbd5e1; cursor: not-allowed; }
+
+    .play-btn {
+      background-color: #2ecc71;
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .play-btn.playing { background-color: #e74c3c; }
+
+    .page-number { font-size: 13px; color: #94a3b8; font-weight: bold; }
+
+    .popover {
+      position: absolute;
+      display: none;
+      width: 240px;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+      padding: 14px;
+      text-align: center;
+      z-index: 2000;
+      border: 1px solid #e1e8ed;
+      font-family: sans-serif;
+    }
+
+    .popover-header { display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .popover-word { font-size: 18px; font-weight: bold; color: #2c3e50; }
+    .audio-btn { background: none; border: none; cursor: pointer; font-size: 18px; padding: 2px 6px; }
+    .popover-ipa { font-size: 13px; color: #7f8c8d; margin: 4px 0 10px 0; }
+    .popover-translation { font-size: 15px; font-weight: 600; color: #27ae60; margin-bottom: 12px; }
+    .popover-actions { display: flex; gap: 8px; }
+    .btn { flex: 1; padding: 8px; border: none; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer; }
+    .btn-know { background-color: #2ecc71; color: white; }
+    .btn-learn { background-color: #f1c40f; color: white; }
+  </style>
+</head>
+<body>
+
+<div class="book-viewport">
+  <div class="book-container">
+    <div id="pages-wrapper"></div>
+
+    <div class="controls">
+      <button class="nav-btn" id="prev-btn" onclick="manualChangePage(-1)" disabled>← Späť</button>
+      <button class="play-btn" id="play-btn" onclick="togglePlay()">▶ Prehrať</button>
+      <span class="page-number" id="page-num">Strana 1 z 2</span>
+      <button class="nav-btn" id="next-btn" onclick="manualChangePage(1)">Ďalej →</button>
+    </div>
+
+    <div id="popover" class="popover">
+      <div class="popover-header">
+        <span id="pop-word" class="popover-word">word</span>
+        <button id="pop-audio-btn" class="audio-btn">🔊</button>
+      </div>
+      <div id="pop-ipa" class="popover-ipa">| ... |</div>
+      <div id="pop-translation" class="popover-translation">Načítavam...</div>
+      <div class="popover-actions">
+        <button class="btn btn-know" onclick="action('Viem')">Viem</button>
+        <button class="btn btn-learn" onclick="action('Učiť sa')">Učiť sa</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- OBYČAJNÝ HTML5 PREHRÁVAČ -->
+<audio id="main-audio"></audio>
+
+<script>
+  const phrasesList = [
+    "looking forward to", "dense fog", "wandered around", "take a break",
+    "ancient trees", "narrow path", "came across", "wooden cabin",
+    "glowing light", "curious about", "step inside", "warm fireplace"
+  ];
+
+  // Pripojené MP3 súbory pre každú stranu
+  const pagesData = [
+    {
+      audioUrl: "https://actions.google.com/sounds/v1/ambiences/outdoor_rain.ogg", // Sem dáš tvoje vygenerované audio (napr. "strana1.mp3")
+      text: [
+        "The autumn morning was chilly, and the sun was barely visible through the dense fog. Oliver had been looking forward to this weekend for weeks, hoping to escape the noise of the city.",
+        "He grabbed his backpack, tightened his boots, and walked straight into the deep forest. The air smelled of pine needles and damp earth as he ventured deeper."
+      ]
+    },
+    {
+      audioUrl: "https://actions.google.com/sounds/v1/ambiences/outdoor_rain.ogg", // "strana2.mp3"
+      text: [
+        "As he walked further, the trees grew taller and older. The wind whispered through the ancient trees, making a mysterious sound that echoed all around him.",
+        "He wandered around for nearly two hours, following a narrow path that seemed to disappear into the thick bushes."
+      ]
+    }
+  ];
+
+  let currentSheetIndex = 0; 
+  const totalPages = pagesData.length;
+  const totalSheets = Math.ceil(totalPages / 2);
+  let isAnimating = false;
+
+  let isPlaying = false;
+  let wordElements = [];
+  let activeTimers = [];
+  const audioElement = document.getElementById('main-audio');
+
+  function generatePageHtml(pageNum, pageObj) {
+    if (!pageObj) return `<h1>End of Book</h1>`;
+    let html = `<h1>Page ${pageNum}</h1>`;
+    
+    pageObj.text.forEach(rawParagraph => {
+      let processedText = rawParagraph;
+      phrasesList.forEach(phrase => {
+        const regex = new RegExp(`\\b(${phrase})\\b`, 'gi');
+        processedText = processedText.replace(regex, '___PHRASE___$1___ENDPHRASE___');
+      });
+
+      const tokens = processedText.split(' ');
+      let isInsidePhrase = false;
+      let currentPhraseWords = [];
+      let paragraphHtml = [];
+
+      tokens.forEach(token => {
+        if (token.includes('___PHRASE___')) {
+          isInsidePhrase = true;
+          currentPhraseWords.push(token.replace('___PHRASE___', ''));
+        } else if (token.includes('___ENDPHRASE___')) {
+          currentPhraseWords.push(token.replace('___ENDPHRASE___', ''));
+          const fullPhrase = currentPhraseWords.join(' ');
+          paragraphHtml.push(`<span class="word phrase-highlight" data-clean="${fullPhrase.replace(/[^\w\s]/g, "")}">${fullPhrase}</span>`);
+          isInsidePhrase = false;
+          currentPhraseWords = [];
+        } else if (isInsidePhrase) {
+          currentPhraseWords.push(token);
+        } else {
+          const cleanWord = token.replace(/[^\w]/g, "");
+          if (cleanWord) paragraphHtml.push(`<span class="word" data-clean="${cleanWord}">${token}</span>`);
+          else paragraphHtml.push(token);
+        }
+      });
+      html += `<p class="reader-paragraph">${paragraphHtml.join(' ')}</p>`;
+    });
+    return html;
+  }
+
+  function renderPages() {
+    const wrapper = document.getElementById('pages-wrapper');
+    wrapper.innerHTML = '';
+    for (let i = 0; i < totalSheets; i++) {
+      const frontPageNum = (i * 2) + 1;
+      const backPageNum = (i * 2) + 2;
+
+      const sheetElem = document.createElement('div');
+      sheetElem.className = 'paper-sheet';
+      sheetElem.id = `sheet-${i}`;
+
+      const frontFace = document.createElement('div');
+      frontFace.className = 'page-face page-front';
+      frontFace.innerHTML = generatePageHtml(frontPageNum, pagesData[frontPageNum - 1]);
+
+      const backFace = document.createElement('div');
+      backFace.className = 'page-face page-back';
+      backFace.innerHTML = generatePageHtml(backPageNum, pagesData[backPageNum - 1]);
+
+      sheetElem.appendChild(frontFace);
+      sheetElem.appendChild(backFace);
+      wrapper.appendChild(sheetElem);
+    }
+    updateZIndexes();
+    updateWordElements();
+  }
+
+  function updateZIndexes() {
+    for (let i = 0; i < totalSheets; i++) {
+      const sheet = document.getElementById(`sheet-${i}`);
+      sheet.style.zIndex = (i < currentSheetIndex) ? (i + 1) : (totalSheets - i);
+    }
+  }
+
+  function updateWordElements() {
+    const currentSheet = document.getElementById(`sheet-${currentSheetIndex}`);
+    if (!currentSheet) return;
+    const pageFace = currentSheet.querySelector('.page-front'); 
+    wordElements = Array.from(pageFace.querySelectorAll('.word'));
+  }
+
+  function togglePlay() {
+    if (isPlaying) stopSpeech();
+    else startSpeech();
+  }
+
+  function clearTimers() {
+    activeTimers.forEach(t => clearTimeout(t));
+    activeTimers = [];
+  }
+
+  function stopSpeech() {
+    isPlaying = false;
+    clearTimers();
+    audioElement.pause();
+    audioElement.currentTime = 0;
+    clearWordHighlights();
+    const playBtn = document.getElementById('play-btn');
+    playBtn.innerText = '▶ Prehrať';
+    playBtn.classList.remove('playing');
+  }
+
+  function clearWordHighlights() {
+    document.querySelectorAll('.word-reading').forEach(el => el.classList.remove('word-reading'));
+  }
+
+  function startSpeech() {
+    isPlaying = true;
+    const playBtn = document.getElementById('play-btn');
+    playBtn.innerText = '⏹ Zastaviť';
+    playBtn.classList.add('playing');
+
+    updateWordElements();
+
+    const currentPageData = pagesData[currentSheetIndex * 2];
+    audioElement.src = currentPageData.audioUrl;
+
+    audioElement.onloadedmetadata = () => {
+      if (!isPlaying) return;
+
+      const durationMs = audioElement.duration * 1000;
+      
+      // Spočítame celkový počet znakov na strane
+      let totalChars = 0;
+      wordElements.forEach(w => totalChars += w.innerText.length);
+
+      let accumulatedDelay = 0;
+
+      // Rozvrhneme presný čas pre každé slovo na základe celkovej dĺžky MP3 súboru
+      wordElements.forEach((spanElement) => {
+        const charLength = spanElement.innerText.length;
+        const wordShare = charLength / totalChars;
+        const wordDuration = durationMs * wordShare;
+
+        const timer = setTimeout(() => {
+          if (isPlaying) {
+            clearWordHighlights();
+            spanElement.classList.add('word-reading');
+          }
+        }, accumulatedDelay);
+
+        activeTimers.push(timer);
+        accumulatedDelay += wordDuration;
+      });
+
+      audioElement.play();
+    };
+
+    audioElement.onended = () => {
+      stopSpeech();
+    };
+  }
+
+  function manualChangePage(dir) {
+    stopSpeech();
+    changePage(dir);
+  }
+
+  function changePage(direction) {
+    if (isAnimating) return;
+    isAnimating = true;
+
+    if (direction === 1 && currentSheetIndex < totalSheets) {
+      document.getElementById(`sheet-${currentSheetIndex}`).classList.add('flipped');
+      currentSheetIndex++;
+    } else if (direction === -1 && currentSheetIndex > 0) {
+      currentSheetIndex--;
+      document.getElementById(`sheet-${currentSheetIndex}`).classList.remove('flipped');
+    }
+
+    setTimeout(() => {
+      updateZIndexes();
+      updateWordElements();
+      isAnimating = false;
+    }, 400);
+  }
+
+  renderPages();
+</script>
+</body>
+</html>
